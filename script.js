@@ -25,6 +25,17 @@ const PRODUCT_IMAGES={
   'Besan Laddu':'images/besan-laddu.jpg'
 };
 
+function normalizeCategory(c){
+  const x=String(c||'').trim().toLowerCase();
+  if(x==='sweet'||x==='sweets') return 'Sweets';
+  if(x==='pickle'||x==='pickles') return 'Pickles';
+  if(x==='snack'||x==='snacks') return 'Snacks';
+  return String(c||'').trim();
+}
+function categoryFromUrl(q){
+  return normalizeCategory(q.get('c')||'');
+}
+
 async function loadSupabaseProducts(){
   try{
     if(!window.supabase?.createClient) throw new Error('Supabase library did not load');
@@ -37,7 +48,7 @@ async function loadSupabaseProducts(){
     P=(data||[]).map((p,i)=>({
       id:p.id,
       name:p.name,
-      cat:p.category||'Snacks',
+      cat:normalizeCategory(p.category||'Snacks'),
       hue:[38,25,52,28,35,45,12,52,35,8,35,28,30,30][i%14],
       image:p.image_url||PRODUCT_IMAGES[p.name]||'',
       desc:p.description||'Traditional homemade food from Devaki Amma’s kitchen.',
@@ -54,6 +65,7 @@ async function loadSupabaseProducts(){
     // Mango Pickle is unavailable and intentionally has no variants.
     const mango=P.find(p=>p.name==='Mango Pickle');
     if(mango)mango.stock=false;
+    P=P.map(p=>({...p,cat:normalizeCategory(p.cat)}));
     sv('products_v2',P);
     route();
     toast('Products loaded from Supabase');
@@ -136,7 +148,7 @@ home(){const f=P.filter(p=>p.stock);return `<section class="hero"><div class="w"
 <section class="sec" style="padding-top:0"><div class="w"><h2>What customers say</h2><p class="demo">Sample/demo reviews. Replace with real customer reviews in REV.</p><div class="g3">${REV.map(r=>`<div class="box"><div class="st">★★★★★</div><p class="q">“${r[1]}”</p><b>${r[0]}</b> <span class="demo">(demo)</span></div>`).join('')}</div></div></section>
 <section class="sec" style="padding-top:0"><div class="w"><h2>Follow along</h2><div class="soc">${[38,12,52,28,80,140].map((h,i)=>`<img src="${svg(h,i,'Social photo')}" alt="Placeholder social photo">`).join('')}</div><p>${CFG.ig?`<a class="btn o sm" href="${CFG.ig}" target="_blank" rel="noopener">Instagram: @food_by_devaki</a>`:'Add your Instagram link in CFG.ig'}</p></div></section>
 <section class="sec" style="padding-top:0"><div class="w"><div class="nl"><h2>Stay Connected with Devaki Foods</h2><form data-f="news"><input type="email" name="e" required placeholder="Email address" aria-label="Email address"><button class="btn">Subscribe</button></form></div></div></section>`},
-shop(){const l=list();return `<div class="w sec"><h1 style="font-size:2.6rem">${S.wish?'Wishlist':S.cat||'All Products'}</h1><div class="shop"><aside class="filt"><div class="box"><div><label for="fq">Search</label><input id="fq" data-s="q" value="${esc(S.q)}" placeholder="Search…"></div><div><label for="fc">Category</label><select id="fc" data-s="cat"><option value="">All Products</option>${CATS.map(c=>`<option ${S.cat===c?'selected':''}>${c}</option>`).join('')}</select></div><div><label for="fs">Sort by</label><select id="fs" data-s="sort">${[['popular','Popularity'],['new','Newest'],['low','Price: low to high'],['high','Price: high to low']].map(([v,t])=>`<option value="${v}" ${S.sort===v?'selected':''}>${t}</option>`).join('')}</select></div><div><label for="fm">Max price (from ${inr(0)}): <b id="mv">${inr(S.max)}</b></label><input id="fm" type="range" min="100" max="2000" step="50" value="${S.max}" data-s="max"></div></div></aside><div><p id="rc">${l.length} products</p><div class="g4" id="pl">${l.map(card).join('')||'<p>No products match. Try clearing filters.</p>'}</div></div></div></div>`},
+shop(){const l=list();return `<div class="w sec"><h1 style="font-size:2.6rem">${S.wish?'Wishlist':normalizeCategory(S.cat)||'All Products'}</h1><div class="shop"><aside class="filt"><div class="box"><div><label for="fq">Search</label><input id="fq" data-s="q" value="${esc(S.q)}" placeholder="Search…"></div><div><label for="fc">Category</label><select id="fc" data-s="cat"><option value="">All Products</option>${CATS.map(c=>`<option ${S.cat===c?'selected':''}>${c}</option>`).join('')}</select></div><div><label for="fs">Sort by</label><select id="fs" data-s="sort">${[['popular','Popularity'],['new','Newest'],['low','Price: low to high'],['high','Price: high to low']].map(([v,t])=>`<option value="${v}" ${S.sort===v?'selected':''}>${t}</option>`).join('')}</select></div><div><label for="fm">Max price (from ${inr(0)}): <b id="mv">${inr(S.max)}</b></label><input id="fm" type="range" min="100" max="2000" step="50" value="${S.max}" data-s="max"></div></div></aside><div><p id="rc">${l.length} products</p><div class="g4" id="pl">${l.map(card).join('')||'<p>No products match. Try clearing filters.</p>'}</div></div></div></div>`},
 product(id){const p=find(id);if(!p)return nf();const s=p.sizes[0],rel=P.filter(x=>x.id!==id&&x.cat===p.cat).concat(P.filter(x=>x.id!==id&&x.cat!==p.cat)).slice(0,3);return `<div class="w sec"><p><a href="#/shop">← Shop</a> / ${esc(p.cat)}</p><div class="pd" data-pid="${p.id}"><div><img class="main" id="mi" src="${img(p)}" alt="${esc(p.name)} (placeholder image)"><div class="th">${[0,1,2].map(i=>`<img src="${img(p,i)}" class="${i?'':'on'}" data-a="th" alt="View ${i+1}" tabindex="0">`).join('')}</div></div>
 <div><h1 style="font-size:2.6rem">${esc(p.name)}</h1><div class="st">${stars(p.rating)} <small>(${p.rating})</small></div><p>${esc(p.long)}</p><div class="pr" style="font-size:1.8rem" id="dp">${inr(s.p)}${s.mrp>s.p?`<span class="mrp">${inr(s.mrp)}</span>`:''}</div><label>Package size</label><div class="chips" id="sz">${p.sizes.map((z,i)=>`<button class="chip ${i?'':'on'}" data-a="size" data-p="${z.p}" data-m="${z.mrp||0}" data-l="${esc(z.l)}">${esc(z.l)}</button>`).join('')}</div><br><label>Quantity</label><div class="qty"><button data-a="dq" aria-label="Decrease">−</button><b id="dqv">1</b><button data-a="iq" aria-label="Increase">+</button></div>
 <div class="row"><button class="btn" data-a="dadd" ${p.stock?'':'disabled'}>Add to Cart</button><button class="btn g" data-a="dbuy" ${p.stock?'':'disabled'}>Buy Now</button></div>${p.stock?'':'<p><b>Currently out of stock</b></p>'}
@@ -158,10 +170,10 @@ ${e?`<form class="box" data-f="prod" style="display:grid;gap:12px;margin-top:16p
 <h2 style="margin-top:40px">Messages</h2>${ld('msgs',[]).map(m=>`<div class="box" style="margin-bottom:8px"><b>${esc(m.n)}</b> ${esc(m.p)} ${esc(m.e)}<br>${esc(m.m)}</div>`).join('')||'<p>None yet.</p>'}</div>`}};
 const nf=()=>`<div class="w sec"><h1>Page not found</h1><a class="btn" href="#/">Back to home</a></div>`;
 const sumHtml=t=>`<div><span>Subtotal</span><span>${inr(t.sub)}</span></div><div><span>Discount${S.off?` (${S.off}%)`:''}</span><span>−${inr(t.off)}</span></div><div><span>Shipping</span><span>${t.ship?inr(t.ship):'Free'}</span></div><div class="t"><span>Total</span><span>${inr(t.tot)}</span></div>`;
-function list(){let l=P.filter(p=>(!S.cat||p.cat===S.cat)&&(!S.wish||WISH.includes(p.id))&&p.sizes[0].p<=S.max&&(p.name+p.desc+p.cat).toLowerCase().includes(S.q.toLowerCase()));const k=S.sort;return l.sort((a,b)=>k==='low'?a.sizes[0].p-b.sizes[0].p:k==='high'?b.sizes[0].p-a.sizes[0].p:k==='new'?(b.n||0)-(a.n||0):b.rating-a.rating)}
+function list(){const activeCat=normalizeCategory(S.cat);let l=P.filter(p=>(!activeCat||normalizeCategory(p.cat)===activeCat)&&(!S.wish||WISH.includes(p.id))&&p.sizes[0].p<=S.max&&(p.name+p.desc+p.cat).toLowerCase().includes(S.q.toLowerCase()));const k=S.sort;return l.sort((a,b)=>k==='low'?a.sizes[0].p-b.sizes[0].p:k==='high'?b.sizes[0].p-a.sizes[0].p:k==='new'?(b.n||0)-(a.n||0):b.rating-a.rating)}
 /* ===== router ===== */
 function navigate(hash){if(location.hash===hash){route();}else{location.hash=hash}}
-function route(){const h=location.hash.replace(/^#\/?/,'')||'',[path,qs]=h.split('?'),[r,a]=path.split('/');const q=new URLSearchParams(qs||'');S.wish=r==='wishlist';if(r==='shop'||r==='wishlist'){if(q.has('c'))S.cat=q.get('c');else if(r==='shop')S.cat='';}
+function route(){const h=location.hash.replace(/^#\/?/,'')||'',[path,qs]=h.split('?'),[r,a]=path.split('/');const q=new URLSearchParams(qs||'');S.wish=r==='wishlist';if(r==='shop'||r==='wishlist'){if(q.has('c'))S.cat=categoryFromUrl(q);else if(r==='shop')S.cat='';else S.cat='';}
 let v;switch(r){case'':v=pages.home();break;case'shop':case'wishlist':v=pages.shop();break;case'p':v=pages.product(a);break;case'cart':v=pages.cart();break;case'checkout':v=pages.checkout();break;case'confirm':v=pages.confirm(a);break;case'about':v=pages.about();break;case'contact':v=pages.contact();break;case'info':v=pages.info(a);break;case'admin':v=pages.admin();break;default:v=nf()}
 $('#main').innerHTML=v;const T={'':'Devaki Foods | Authentic Taste of Amma | Sweets, Pickles & Snacks',shop:'Shop | Devaki Foods',cart:'Cart | Devaki Foods',checkout:'Checkout | Devaki Foods',about:'Our Story | Devaki Foods',contact:'Contact | Devaki Foods'};document.title=(r==='p'&&find(a)?find(a).name+' | Devaki Foods':T[r]||'Devaki Foods');if(!window._keep)scrollTo(0,0);window._keep=0;hdr()}
 function reList(){const l=list();$('#pl').innerHTML=l.map(card).join('')||'<p>No products match. Try clearing filters.</p>';$('#rc').textContent=l.length+' products';const m=$('#mv');if(m)m.textContent=inr(S.max)}
@@ -169,10 +181,9 @@ function place(){const t=totals(),o={id:'DF'+Date.now().toString(36).toUpperCase
 startPayment(o).then(()=>{ORD.unshift(o);sv('orders',ORD);CART=[];sv('cart',CART);S.step=1;S.off=0;S.coupon='';location.hash='#/confirm/'+o.id}).catch(e=>toast(e.message))}
 /* ===== events ===== */
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id,cd=b.closest('.card'),pid=()=>$('.pd')?.dataset.pid;
-if(a==='menu'){e.preventDefault();$('#menu').classList.toggle('open');return;}
-/* Navigation links intentionally use their normal href. The URL/hash is the single source of truth. */
-else if(a==='srch'){e.preventDefault();$('#sbar').classList.toggle('open');if($('#sbar').classList.contains('open'))$('#sbar input')?.focus();return}
-else if(a==='feat'){e.preventDefault();document.getElementById('featured')?.scrollIntoView({behavior:'smooth'});return}
+if(a==='menu'){$('#menu').classList.toggle('open');return;}else if(a==='shop'){e.preventDefault();S.cat='';S.q='';navigate('#/shop');return}else if(a==='srch'){e.preventDefault();$('#sbar').classList.toggle('open');if($('#sbar').classList.contains('open'))$('#sbar input')?.focus();return}
+else if(a==='admin'){e.preventDefault();navigate('#/admin');return}else if(a==='category'){e.preventDefault();const cat=normalizeCategory(b.dataset.cat||'');S.cat=cat;S.q='';navigate('#/shop?c='+encodeURIComponent(cat));return}
+else if(a==='cats'){e.preventDefault();S.cat='';S.q='';navigate('#/shop');return}else if(a==='feat'){e.preventDefault();document.getElementById('featured')?.scrollIntoView({behavior:'smooth'});return}
 else if(a==='wish'){WISH=WISH.includes(id)?WISH.filter(x=>x!==id):[...WISH,id];sv('wish',WISH);b.textContent=WISH.includes(id)?'♥':'♡';hdr()}
 else if(a==='add'||a==='buy'){addCartFrom(cd,id,a==='buy')}
 else if(a==='qv'){const p=find(id);S.qv=p;const m=document.createElement('div');m.className='mod';m.innerHTML=`<div class="box" role="dialog" aria-label="Quick view"><button class="btn sm o" data-a="close" style="float:right">Close</button><div class="g3"><img src="${img(p)}" alt="" style="border-radius:14px"><div><h2>${esc(p.name)}</h2><p>${esc(p.long)}</p><p class="pr">From ${inr(p.sizes[0].p)}</p><a class="btn" href="#/p/${p.id}" data-a="close">View full details</a></div></div></div>`;document.body.appendChild(m)}
@@ -191,7 +202,7 @@ else if(a==='del'){if(confirm('Delete this product?')){P=P.filter(p=>p.id!==id);
 const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 function addCartFrom(cd,id,buy){addCart(id,cd.querySelector('[data-sz]').value,Math.max(1,Math.min(20,+cd.querySelector('[data-qt]').value||1)));if(buy)location.hash='#/checkout'}
 document.addEventListener('change',e=>{const t=e.target;if(t.matches('[data-sz]')){t.closest('.card').querySelector('[data-pr]').textContent=inr(t.selectedOptions[0].dataset.p)}
-else if(t.matches('[data-s]')){const k=t.dataset.s;S[k]=k==='max'?+t.value:t.value;reList()}
+else if(t.matches('[data-s]')){const k=t.dataset.s;S[k]=k==='max'?+t.value:k==='cat'?normalizeCategory(t.value):t.value;reList()}
 else if(t.matches('[data-cs]')){CART[+t.dataset.cs].sz=t.value;const d=CART.findIndex((c,i)=>i!==+t.dataset.cs&&c.id===CART[+t.dataset.cs].id&&c.sz===t.value);if(d>-1){CART[d].q+=CART[+t.dataset.cs].q;CART.splice(+t.dataset.cs,1)}sv('cart',CART);window._keep=1;route()}
 else if(t.matches('[data-os]')){ORD[+t.dataset.os].status=t.value;sv('orders',ORD);toast('Status updated')}});
 document.addEventListener('input',e=>{if(e.target.matches('[data-s="q"]')){S.q=e.target.value;reList()}else if(e.target.matches('[data-s="max"]')){S.max=+e.target.value;reList()}});

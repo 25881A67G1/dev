@@ -1,16 +1,15 @@
-DEVAKI FOODS - NAVIGATION FIX v2
+DEVAKI FOODS - CATEGORY NAVIGATION FIX
 
-Replace index.html, script.js and style.css in the GitHub project.
-Keep the existing images/ folder.
+This version fixes category navigation/filter matching between the URL, UI and Supabase data.
 
-Fixes:
-- Shop Now uses normal hash navigation
-- Header Shop uses normal hash navigation
-- Sweets / Pickles / Snacks category links use normal hash navigation
-- Dashboard / owner login uses normal hash navigation
-- Search remains handled by the search form and routes to /shop
-- URL/hash is now the single source of truth for routing
-- Category parsing no longer double-decodes the URL
-- Added cache-busting version to index.html so Render/browser does not keep an older script
+Changes:
+- Normalizes Sweets/Pickles/Snacks category names (case and surrounding spaces).
+- Uses the URL category as the source of truth when opening a category.
+- Normalizes Supabase product categories before filtering.
+- Normalizes the category dropdown selection.
+- Keeps the existing Lemon Pickle and Mango Pickle image mappings unchanged.
 
-After pushing to GitHub, wait for Render deployment and test in a private/incognito window first.
+Replace the existing index.html, script.js and style.css in your project with these files.
+Keep your existing images/ folder unchanged.
+
+After pushing to GitHub, Render should auto-deploy the changes.
