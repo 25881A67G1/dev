@@ -1,15 +1,18 @@
-DEVAKI FOODS - CATEGORY NAVIGATION FIX
+DEVAKI FOODS - CRASH FIX (Shop Now / Pickles / Search / sidebar / dashboard)
 
-This version fixes category navigation/filter matching between the URL, UI and Supabase data.
+Root cause: products with no size/variants (e.g. Mango Pickle, unavailable) crashed the
+Shop page ("Cannot read properties of undefined (reading 'p')"), so Shop Now, Pickles,
+Search and the filter sidebar never rendered.
 
-Changes:
-- Normalizes Sweets/Pickles/Snacks category names (case and surrounding spaces).
-- Uses the URL category as the source of truth when opening a category.
-- Normalizes Supabase product categories before filtering.
-- Normalizes the category dropdown selection.
-- Keeps the existing Lemon Pickle and Mango Pickle image mappings unchanged.
+Changes in script.js only (index.html and style.css are unchanged):
+- Shop/list/card/product/quick-view no longer crash on products without sizes
+  (they show "Currently unavailable").
+- Product ids are always strings, so Edit/Delete/Add to cart/wishlist work with Supabase ids.
+- If Supabase returns no rows, the saved catalog is kept instead of being wiped.
+- Supabase refresh no longer scrolls to top, resets filters or closes the search bar.
+- Removed the "Products loaded from Supabase" toast.
+- Dashboard shows a note that product edits are saved only in this browser.
+- Image mappings (Lemon/Mango Pickle) left unchanged as before.
 
-Replace the existing index.html, script.js and style.css in your project with these files.
-Keep your existing images/ folder unchanged.
-
-After pushing to GitHub, Render should auto-deploy the changes.
+Replace script.js in your project, push to GitHub, Render will redeploy.
+Tip: hard refresh (Ctrl+Shift+R) once after deploy.
