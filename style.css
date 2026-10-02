@@ -68,3 +68,5 @@ footer a{display:block;padding:3px 0;opacity:.85}footer a:hover{opacity:1;text-d
 .hero .w,.pd,.shop,.cl,.why{grid-template-columns:1fr}.filt{position:static}.why{padding:28px}.sec{padding:44px 0}
 .sticky{display:flex;position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));gap:10px;z-index:15;align-items:center}.sticky .btn{flex:1}.nl form{flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+a.chip{display:inline-block}
+.fgrid input[readonly]{opacity:.7}
