@@ -3,6 +3,71 @@ const CFG={phone:'7997312367',wa:'https://wa.me/917386765221',ig:'https://www.in
 adminPass:'devaki-admin', /* DEMO ONLY: client-side check. Replace with real server auth before launch. */
 shipping:60,freeAbove:999,coupons:{WELCOME10:10}, /* code: % off */
 announce:['Freshly Prepared Traditional Foods','Made with Love, Inspired by Tradition','Order Directly from Devaki Foods']};
+
+/* ===== SUPABASE ===== */
+const SUPABASE_URL='https://hwusdwdnvzeefjjfsueg.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_aGEwbPL0x6mwXM2sSN6mpQ_o9BgQ-YF';
+let supabaseClient=null;
+const PRODUCT_IMAGES={
+  'Minnapa Laddu':'images/minnapa-laddu.jpg',
+  'Belam Nuvula Laddu':'images/belam-nuvula-laddu.png',
+  'Dodu Atukula Chuduva':'images/dodu-atukula-chuduva.jpg',
+  'Sana Atukula Chuduva':'images/sana-atukula-chuduva.jpg',
+  'Murukulu':'images/murukulu.jpg',
+  'Palila Laddu':'images/palila-laddu.jpg',
+  'Mango Pickle':'images/lemon-pickle.jpg',
+  'Lemon Pickle':'images/mango-pickle.jpg',
+  'Rojupuvulu':'images/rojupuvulu.jpg',
+  'Chicken Toku':'images/chicken-toku.jpg',
+  'Gavalu':'images/gavalu.jpg',
+  'Namakpeda':'images/namakpeda.jpg',
+  'Dry Fruit Laddu':'images/dry-fruit-laddu.jpg',
+  'Besan Laddu':'images/besan-laddu.jpg'
+};
+
+async function loadSupabaseProducts(){
+  try{
+    if(!window.supabase?.createClient) throw new Error('Supabase library did not load');
+    supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+    const {data,error}=await supabaseClient
+      .from('products')
+      .select('id,name,description,category,image_url,featured,available,product_variants(id,weight,price,stock)')
+      .order('name');
+    if(error) throw error;
+    P=(data||[]).map((p,i)=>({
+      id:p.id,
+      name:p.name,
+      cat:p.category||'Snacks',
+      hue:[38,25,52,28,35,45,12,52,35,8,35,28,30,30][i%14],
+      image:p.image_url||PRODUCT_IMAGES[p.name]||'',
+      desc:p.description||'Traditional homemade food from Devaki Amma’s kitchen.',
+      long:p.description||'Traditional homemade food from Devaki Amma’s kitchen.',
+      sizes:(p.product_variants||[]).filter(v=>v.stock!==0).map(v=>({l:v.weight,p:Number(v.price),mrp:0})).sort((a,b)=>parseWeight(a.l)-parseWeight(b.l)),
+      featured:!!p.featured,
+      stock:!!p.available && (p.product_variants||[]).some(v=>Number(v.stock)>0),
+      rating:4.7,
+      n:14-i,
+      ing:'Add product ingredients.',
+      storage:'Store in a cool, dry place.',
+      shelf:p.available?'Add shelf life.':'Currently unavailable.'
+    })).filter(p=>p.sizes.length||!p.stock);
+    // Mango Pickle is unavailable and intentionally has no variants.
+    const mango=P.find(p=>p.name==='Mango Pickle');
+    if(mango)mango.stock=false;
+    sv('products_v2',P);
+    route();
+    toast('Products loaded from Supabase');
+  }catch(err){
+    console.error('Supabase catalog error:',err);
+    toast('Could not load Supabase products. Showing saved catalog.');
+  }
+}
+
+function parseWeight(w){
+  const s=String(w||'').toLowerCase().trim();
+  if(s.endsWith('kg'))return parseFloat(s)*1000;
+  return parseFloat(s)||0;
+}
 /* Payment gateway hook: add real credentials/SDK here. Only COD is enabled until then. */
 const PAY={cod:{label:'Cash on Delivery',on:true},upi:{label:'UPI',on:false},card:{label:'Credit/Debit Card',on:false},nb:{label:'Net Banking',on:false},
 gateway:{provider:null,keyId:'ADD_KEY_ID_HERE',createOrderUrl:'ADD_SERVER_ENDPOINT_HERE'}};
@@ -35,7 +100,7 @@ const sv=(k,v)=>{try{localStorage.setItem('df_'+k,JSON.stringify(v))}catch(e){to
 let P=ld('products_v2',DEF),CART=ld('cart',[]),WISH=ld('wish',[]),ORD=ld('orders',[]),ADM=false,S={q:'',cat:'',sort:'popular',max:2000,step:1,cust:{},pay:'cod',coupon:'',off:0,g:0,qv:null,edit:null};
 const svg=(h,i=0,t='Replace with photo')=>{const a=(h+i*40)%360;return 'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${a},55%,82%)"/><stop offset="1" stop-color="hsl(${a},50%,62%)"/></linearGradient></defs><rect width="400" height="400" fill="url(#g)"/><circle cx="200" cy="200" r="130" fill="#fffdf7" opacity=".9"/><circle cx="200" cy="200" r="100" fill="hsl(${a},60%,55%)" opacity=".85"/><circle cx="170" cy="175" r="26" fill="hsl(${a},65%,70%)"/><circle cx="225" cy="215" r="34" fill="hsl(${a},55%,40%)" opacity=".7"/><text x="200" y="372" text-anchor="middle" font-family="Georgia,serif" font-size="18" fill="#3a2a1e" opacity=".7">${t}</text></svg>`)};
 const img=(p,i=0)=>p.image&&i===0?p.image:svg(p.hue,i,p.image?'':'Replace with photo');
-const CATIMG={Sweets:'images/belam-nuvula-laddu.png',Pickles:'images/lemon-pickle.jpg',Snacks:'images/sana-atukula-chuduva.jpg'};
+const CATIMG={Sweets:'images/belam-nuvula-laddu.png',Pickles:'images/mango-pickle.jpg',Snacks:'images/sana-atukula-chuduva.jpg'};
 const HEROIMG='images/authentic-taste.jpg';
 const KITCHENIMG='images/devaki-amma-kitchen.jpg';
 const stars=r=>'★'.repeat(Math.round(r))+'☆'.repeat(5-Math.round(r));
@@ -52,20 +117,20 @@ function card(p){const s=p.sizes[0];return `<article class="card"><a class="im" 
 <div class="two2"><button class="btn sm o" data-a="add" data-id="${p.id}" ${p.stock?'':'disabled'}>Add to Cart</button><button class="btn sm" data-a="buy" data-id="${p.id}" ${p.stock?'':'disabled'}>Buy Now</button></div><button class="btn sm o" style="border-color:var(--line);color:var(--mute)" data-a="qv" data-id="${p.id}">Quick view</button></div></article>`}
 function hdr(){const h=`<div class="ann" id="ann">${esc(CFG.announce[0])}</div><header><div class="w nav"><button class="ib burger" data-a="menu" aria-label="Menu">${I.m}</button><a class="logo" href="#/">DEVAKI<small>FOODS</small></a>
 <nav class="menu" id="menu" aria-label="Main">${[['','Home'],['shop','Shop'],['shop','Categories','cats'],['about','About Us'],['contact','Contact']].map(([r,t,x])=>`<a href="#/${r}${x?'?cats':''}" ${x?'data-a="cats"':''}>${t}</a>`).join('')}</nav>
-<div class="ico"><button class="ib" data-a="srch" aria-label="Search">${I.s}</button><a class="ib" href="#/admin" aria-label="Account / owner login">${I.u}</a><a class="ib" href="#/wishlist" aria-label="Wishlist">${I.h}${WISH.length?`<span class="bdg">${WISH.length}</span>`:''}</a><a class="ib" href="#/cart" aria-label="Cart, ${cnt()} items">${I.c}<span class="bdg">${cnt()}</span></a></div></div>
+<div class="ico"><button class="ib" data-a="srch" aria-label="Search">${I.s}</button><a class="ib" href="#/admin" data-a="admin" aria-label="Dashboard / owner login">${I.u}</a><a class="ib" href="#/wishlist" aria-label="Wishlist">${I.h}${WISH.length?`<span class="bdg">${WISH.length}</span>`:''}</a><a class="ib" href="#/cart" aria-label="Cart, ${cnt()} items">${I.c}<span class="bdg">${cnt()}</span></a></div></div>
 <div class="w sbar" id="sbar"><form data-f="search"><input name="q" type="search" placeholder="Search products…" aria-label="Search products"></form></div></header>`;
 $('#hd').innerHTML=h;let i=0;clearInterval(window._an);window._an=setInterval(()=>{i=(i+1)%CFG.announce.length;const a=$('#ann');if(a)a.textContent=CFG.announce[i]},4000)}
 const soc=(u,t)=>u?`<a href="${u}" target="_blank" rel="noopener">${t}</a>`:`<a style="opacity:.5;pointer-events:none">${t} (add link in CFG)</a>`;
 function ftr(){return `<footer><div class="w"><div class="fg"><div><div class="logo" style="color:#f3cf6b">DEVAKI<small>FOODS</small></div><p style="opacity:.8">Taste of Tradition, Made with Love.</p></div>
-<div><h4>Shop</h4><a href="#/shop">All Products</a>${CATS.map(c=>`<a href="#/shop?c=${c}">${c}</a>`).join('')}</div>
+<div><h4>Shop</h4><a href="#/shop">All Products</a>${CATS.map(c=>`<a href="#/shop?c=${encodeURIComponent(c)}" data-a="category" data-cat="${esc(c)}">${c}</a>`).join('')}</div>
 <div><h4>Information</h4><a href="#/about">About Us</a><a href="#/contact">Contact Us</a>${[['shipping','Shipping & Delivery'],['returns','Returns & Refunds'],['privacy','Privacy Policy'],['terms','Terms & Conditions'],['faq','FAQ']].map(([k,t])=>`<a href="#/info/${k}">${t}</a>`).join('')}</div>
 <div><h4>Contact</h4><a href="tel:${CFG.phone}">${CFG.phone}</a><a href="${CFG.wa}" target="_blank" rel="noopener">WhatsApp</a></div>
 <div><h4>Social</h4>${soc(CFG.ig,'Instagram')}${soc(CFG.fb,'Facebook')}${soc(CFG.yt,'YouTube')}</div></div><div class="copy">© 2026 Devaki Foods. All rights reserved.</div></div></footer>`}
 /* ===== pages ===== */
 const pages={
-home(){const f=P.filter(p=>p.featured);return `<section class="hero"><div class="w"><div><h1>Authentic Taste of Amma</h1><p>Traditional sweets, pickles and snacks made with the flavours of Devaki Amma’s kitchen.</p><div class="row"><a class="btn g" href="#/shop">Shop Now</a><a class="btn o" style="color:#3a2a1e;border-color:#3a2a1e" href="#featured" data-a="feat">Explore Our Products</a></div></div><img src="${HEROIMG}" alt="Authentic taste of Amma"></div></section>
+home(){const f=P.filter(p=>p.stock);return `<section class="hero"><div class="w"><div><h1>Authentic Taste of Amma</h1><p>Traditional sweets, pickles and snacks made with the flavours of Devaki Amma’s kitchen.</p><div class="row"><a class="btn g" href="#/shop" data-a="shop">Shop Now</a><a class="btn o" style="color:#3a2a1e;border-color:#3a2a1e" href="#featured" data-a="feat">Explore Our Products</a></div></div><img src="${HEROIMG}" alt="Authentic taste of Amma"></div></section>
 <section class="sec"><div class="w g4">${[['Traditional Taste','Recipes inspired by timeless Indian traditions.'],['Made with Care','Prepared with attention to taste and quality.'],['Homestyle Flavours','Bringing the comfort of homemade food to your doorstep.'],['Freshly Packed','Products packed carefully for a great experience.']].map(([a,b])=>`<div class="box val"><h3>${a}</h3><p>${b}</p></div>`).join('')}</div></section>
-<section class="sec" style="padding-top:0"><div class="w"><h2>Shop by Category</h2><div class="g3">${CATS.map(c=>`<a class="cat" href="#/shop?c=${c}"><img src="${CATIMG[c]}" alt="${c}"><span>${c}</span></a>`).join('')}</div></div></section>
+<section class="sec" style="padding-top:0"><div class="w"><h2>Shop by Category</h2><div class="g3">${CATS.map(c=>`<a class="cat" href="#/shop?c=${encodeURIComponent(c)}" data-a="category" data-cat="${esc(c)}"><img src="${CATIMG[c]}" alt="${c}"><span>${c}</span></a>`).join('')}</div></div></section>
 <section class="sec" id="featured"><div class="w"><h2>Featured Products</h2><div class="g4">${f.map(card).join('')||'<p>No featured products yet.</p>'}</div></div></section>
 <section class="sec"><div class="w why"><div><h2>From Devaki Amma's Kitchen to Your Home</h2><p>Devaki Foods brings traditional Indian flavours from Devaki Amma’s kitchen to your home. Our aim is simple: make the food we love easy to enjoy and share.</p><a class="btn g" href="#/about">Read our story</a></div><img src="${KITCHENIMG}" alt="Devaki Amma's kitchen"></div></section>
 <section class="sec" style="padding-top:0"><div class="w"><h2>What customers say</h2><p class="demo">Sample/demo reviews. Replace with real customer reviews in REV.</p><div class="g3">${REV.map(r=>`<div class="box"><div class="st">★★★★★</div><p class="q">“${r[1]}”</p><b>${r[0]}</b> <span class="demo">(demo)</span></div>`).join('')}</div></div></section>
@@ -95,7 +160,8 @@ const nf=()=>`<div class="w sec"><h1>Page not found</h1><a class="btn" href="#/"
 const sumHtml=t=>`<div><span>Subtotal</span><span>${inr(t.sub)}</span></div><div><span>Discount${S.off?` (${S.off}%)`:''}</span><span>−${inr(t.off)}</span></div><div><span>Shipping</span><span>${t.ship?inr(t.ship):'Free'}</span></div><div class="t"><span>Total</span><span>${inr(t.tot)}</span></div>`;
 function list(){let l=P.filter(p=>(!S.cat||p.cat===S.cat)&&(!S.wish||WISH.includes(p.id))&&p.sizes[0].p<=S.max&&(p.name+p.desc+p.cat).toLowerCase().includes(S.q.toLowerCase()));const k=S.sort;return l.sort((a,b)=>k==='low'?a.sizes[0].p-b.sizes[0].p:k==='high'?b.sizes[0].p-a.sizes[0].p:k==='new'?(b.n||0)-(a.n||0):b.rating-a.rating)}
 /* ===== router ===== */
-function route(){const h=location.hash.slice(2)||'',[path,qs]=h.split('?'),[r,a]=path.split('/');const q=new URLSearchParams(qs||'');S.wish=r==='wishlist';if(r==='shop'||r==='wishlist'){if(q.has('c'))S.cat=q.get('c');else if(r==='shop'&&!q.has('cats'))S.cat=S.cat}
+function navigate(hash){if(location.hash===hash){route();}else{location.hash=hash}}
+function route(){const h=location.hash.replace(/^#\/?/,'')||'',[path,qs]=h.split('?'),[r,a]=path.split('/');const q=new URLSearchParams(qs||'');S.wish=r==='wishlist';if(r==='shop'||r==='wishlist'){if(q.has('c'))S.cat=q.get('c');else if(r==='shop')S.cat='';}
 let v;switch(r){case'':v=pages.home();break;case'shop':case'wishlist':v=pages.shop();break;case'p':v=pages.product(a);break;case'cart':v=pages.cart();break;case'checkout':v=pages.checkout();break;case'confirm':v=pages.confirm(a);break;case'about':v=pages.about();break;case'contact':v=pages.contact();break;case'info':v=pages.info(a);break;case'admin':v=pages.admin();break;default:v=nf()}
 $('#main').innerHTML=v;const T={'':'Devaki Foods | Authentic Taste of Amma | Sweets, Pickles & Snacks',shop:'Shop | Devaki Foods',cart:'Cart | Devaki Foods',checkout:'Checkout | Devaki Foods',about:'Our Story | Devaki Foods',contact:'Contact | Devaki Foods'};document.title=(r==='p'&&find(a)?find(a).name+' | Devaki Foods':T[r]||'Devaki Foods');if(!window._keep)scrollTo(0,0);window._keep=0;hdr()}
 function reList(){const l=list();$('#pl').innerHTML=l.map(card).join('')||'<p>No products match. Try clearing filters.</p>';$('#rc').textContent=l.length+' products';const m=$('#mv');if(m)m.textContent=inr(S.max)}
@@ -103,8 +169,10 @@ function place(){const t=totals(),o={id:'DF'+Date.now().toString(36).toUpperCase
 startPayment(o).then(()=>{ORD.unshift(o);sv('orders',ORD);CART=[];sv('cart',CART);S.step=1;S.off=0;S.coupon='';location.hash='#/confirm/'+o.id}).catch(e=>toast(e.message))}
 /* ===== events ===== */
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id,cd=b.closest('.card'),pid=()=>$('.pd')?.dataset.pid;
-if(a==='menu')$('#menu').classList.toggle('open');else if(a==='srch'){$('#sbar').classList.toggle('open');$('#sbar input').focus()}
-else if(a==='cats'){e.preventDefault();S.cat='';location.hash='#/shop?cats'}else if(a==='feat'){e.preventDefault();$('#featured').scrollIntoView()}
+if(a==='menu'){e.preventDefault();$('#menu').classList.toggle('open');return;}
+/* Navigation links intentionally use their normal href. The URL/hash is the single source of truth. */
+else if(a==='srch'){e.preventDefault();$('#sbar').classList.toggle('open');if($('#sbar').classList.contains('open'))$('#sbar input')?.focus();return}
+else if(a==='feat'){e.preventDefault();document.getElementById('featured')?.scrollIntoView({behavior:'smooth'});return}
 else if(a==='wish'){WISH=WISH.includes(id)?WISH.filter(x=>x!==id):[...WISH,id];sv('wish',WISH);b.textContent=WISH.includes(id)?'♥':'♡';hdr()}
 else if(a==='add'||a==='buy'){addCartFrom(cd,id,a==='buy')}
 else if(a==='qv'){const p=find(id);S.qv=p;const m=document.createElement('div');m.className='mod';m.innerHTML=`<div class="box" role="dialog" aria-label="Quick view"><button class="btn sm o" data-a="close" style="float:right">Close</button><div class="g3"><img src="${img(p)}" alt="" style="border-radius:14px"><div><h2>${esc(p.name)}</h2><p>${esc(p.long)}</p><p class="pr">From ${inr(p.sizes[0].p)}</p><a class="btn" href="#/p/${p.id}" data-a="close">View full details</a></div></div></div>`;document.body.appendChild(m)}
@@ -128,7 +196,7 @@ else if(t.matches('[data-cs]')){CART[+t.dataset.cs].sz=t.value;const d=CART.find
 else if(t.matches('[data-os]')){ORD[+t.dataset.os].status=t.value;sv('orders',ORD);toast('Status updated')}});
 document.addEventListener('input',e=>{if(e.target.matches('[data-s="q"]')){S.q=e.target.value;reList()}else if(e.target.matches('[data-s="max"]')){S.max=+e.target.value;reList()}});
 document.addEventListener('submit',e=>{const f=e.target.dataset.f;if(!f)return;e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
-if(f==='search'){S.q=d.q;S.cat='';$('#sbar').classList.remove('open');location.hash='#/shop';route()}
+if(f==='search'){S.q=(d.q||'').trim();S.cat='';$('#sbar').classList.remove('open');navigate('#/shop')}
 else if(f==='news'){const n=ld('news',[]);n.push(d.e);sv('news',n);e.target.reset();toast('Subscribed. Thank you!')}
 else if(f==='msg'){const m=ld('msgs',[]);m.unshift(d);sv('msgs',m);e.target.reset();toast('Message sent. We will get back to you.')}
 else if(f==='login'){if(d.p===CFG.adminPass){ADM=true;route()}else $('#ae').textContent='Incorrect password.'}
@@ -138,4 +206,4 @@ else if(f==='prod'){const ed=S.edit,fin=()=>{const sizes=d.sizes.split('\n').map
 const p={...ed,name:d.name,cat:d.cat,desc:d.desc,long:d.long,sizes,ing:d.ing,storage:d.storage,shelf:d.shelf,featured:!!d.featured,stock:!!d.stock};if(!p.id)p.id=d.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+Date.now().toString(36);const i=P.findIndex(x=>x.id===p.id);i>-1?P[i]=p:P.push(p);sv('products_v2',P);S.edit=null;window._keep=1;route();toast('Product saved')};
 const fl=e.target.file.files[0];if(fl){if(fl.size>600000)return toast('Image too large. Use one under 600 KB.');const r=new FileReader();r.onload=()=>{ed.image=r.result;fin()};r.readAsDataURL(fl)}else fin()}});
 window.addEventListener('hashchange',route);
-$('#root').innerHTML='<div id="hd"></div><main id="main"></main>'+ftr();route();
+$('#root').innerHTML='<div id="hd"></div><main id="main"></main>'+ftr();route();loadSupabaseProducts();
